@@ -96,7 +96,7 @@ def load_parallel_text_data(
                 temp_data["target_text"].append(target_line)
     return temp_data
 
-
+#TODO make less jank, maybe ask for split type?
 def load_inuktitut_parallel_corpus(path: str):
     """Loads data from parallel corpus files specified by
 
@@ -335,7 +335,7 @@ def load_individual_gold_standards(gs_dir: str):
 
     return pd.concat(gs_dfs, ignore_index=True)
 
-
+#TODO double check cree serializing works properly, I have it set up improperly in zero_shot.py
 def serialize_parallel_corpus(
     input_path: str,
     output_path: str,
