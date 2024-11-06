@@ -97,7 +97,7 @@ def load_parallel_text_data(
     return temp_data
 
 #TODO make less jank, maybe ask for split type?
-def load_inuktitut_parallel_corpus(path: str):
+def load_inuktitut_parallel_corpus(path: str, split: str = 'test'):
     """Loads data from parallel corpus files specified by
 
     Args:
@@ -339,6 +339,7 @@ def load_individual_gold_standards(gs_dir: str):
 def serialize_parallel_corpus(
     input_path: str,
     output_path: str,
+    split: str = 'test',
     mode: LanguageMode = LanguageMode.INUKTITUT,
 ):
     """

@@ -1,11 +1,15 @@
-from utils import serialize_parallel_corpus
+import argparse
+import os
+# from utils import serialize_parallel_corpus
 
 
 project_dir = os.path.join(os.path.dirname(__file__), os.pardir)
 dotenv_path = os.path.join(project_dir, ".env")
-load_dotenv(dotenv_path)
 
 #TODO add code to preprocess and serialize data on remote cluster
+
+
+#TODO add preprocessing code for data -- original pipeline has not worked well
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Define parameters for preprocessing and serializing data")
     parser.add_argument('source_language', type=str, default='Inuktitut', choices=['Inuktitut', 'Cree'] , help='Language to perform experiments on')
