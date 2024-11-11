@@ -1,11 +1,9 @@
 import os
 import re
-from enum import Enum
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Literal, get_args, get_origin
+from sys import _getframe
 
 import pandas as pd
-
-# import pyarrow.parquet as pq
 from defusedxml import ElementTree as ET
 from dotenv import load_dotenv
 from nltk.translate.bleu_score import sentence_bleu
@@ -14,15 +12,28 @@ project_dir = os.path.join(os.path.dirname(__file__), os.pardir)
 dotenv_path = os.path.join(project_dir, ".env")
 load_dotenv(dotenv_path)
 
-class GoldStandardMode(Enum):
-    CONSENSUS = "consensus"
-    INDIVIDUAL = "individual"
+SOURCE_LANGUAGES = Literal['inuktitut', 'cree']
+
+SPLITS = Literal['test', 'train', 'dev', 'dev-dedup', 'devtest-dedup', 'devtest', 'test-dedup']
+
+GOLD_STANDARD_MODES = Literal['consensus', 'individual']
 
 
-class LanguageMode(Enum):
-    INUKTITUT = "inuktitut"
-    CREE = "cree"
+def enforce_literals(function):
+    """A helper function to enforce literals in function arguments
 
+    Args:
+        function (function object): The function for which literals are to be enforced
+
+    Raises:
+        AssertionError: Is raised if arguments are not in literal
+    """
+    kwargs = _getframe(1).f_locals
+    for name, type_ in function.__annotations__.items():
+        value = kwargs.get(name)
+        options = get_args(type_)
+        if get_origin(type_) is Literal and name in kwargs and value not in options:
+            raise AssertionError(f"'{value}' is not in {options} for '{name}'")
 
 def eval_results(res_df: pd.DataFrame):
     """
@@ -96,8 +107,8 @@ def load_parallel_text_data(
                 temp_data["target_text"].append(target_line)
     return temp_data
 
-#TODO make less jank, maybe ask for split type?
-def load_inuktitut_parallel_corpus(path: str, split: str = 'test'):
+
+def load_inuktitut_parallel_corpus(path: str, split: SPLITS = 'test'):
     """Loads data from parallel corpus files specified by
 
     Args:
@@ -106,32 +117,17 @@ def load_inuktitut_parallel_corpus(path: str, split: str = 'test'):
     Returns:
         pd.DataFrame: Dataframe with data from parallel corpus
     """
+    enforce_literals(load_inuktitut_parallel_corpus)
+
     data: dict = {"source_text": [], "target_text": []}
-    source_filename = f"{path}.iu"
-    target_filename = f"{path}.en"
+    source_filename = f"{path}/{split}.iu"
+    target_filename = f"{path}/{split}.en"
 
     # load data from source and target files using load_parallel_text_data
     temp_data = load_parallel_text_data(source_filename, target_filename)
     data["source_text"].extend(temp_data["source_text"])
     data["target_text"].extend(temp_data["target_text"])
     return pd.DataFrame(data)
-
-
-def has_parallel_cree_english_data(filename: str, filenames: List[str]) -> bool:
-    """
-    Check if a file has both a Cree and English version.
-
-    Args:
-        filename (str): The filename to check.
-        filenames (List[str]): The list of filenames in the directory.
-
-    Returns:
-        bool: True if both versions exist, False otherwise.
-    """
-    if filename.endswith("_cr.txt"):
-        english_filename = filename.replace("_cr.txt", "_en.txt")
-        return english_filename in filenames
-    return False
 
 
 def load_cree_parallel_data(input_directory: str) -> pd.DataFrame:
@@ -155,28 +151,12 @@ def load_cree_parallel_data(input_directory: str) -> pd.DataFrame:
             source_path = os.path.join(input_directory, filename)
             target_path = os.path.join(input_directory, filename.replace("_cr.txt", "_en.txt"))
 
-            temp_data = load_parallel_text_data(source_path, target_path)
-            cree_text.extend(temp_data["source_text"])
-            english_text.extend(temp_data["target_text"])
+            if target_path:
+                temp_data = load_parallel_text_data(source_path, target_path)
+                cree_text.extend(temp_data["source_text"])
+                english_text.extend(temp_data["target_text"])
 
     return pd.DataFrame({"cree_text": cree_text, "english_text": english_text})
-
-
-def load_gold_standards(
-    gs_dir: str, mode: GoldStandardMode = GoldStandardMode.CONSENSUS
-):
-    """
-    Loads the gold standard data for a specified mode and file prefix.
-
-    Args:
-        mode (GoldStandardMode): Specifies which gold standard files to load.
-        gs_dir (str): filepath to gold standard directory (
-            i.e. data/external/Nunavut-Hansard-Inuktitut-English-Parallel-Corpus-3.0/gold-standard/)
-    """
-    if mode == GoldStandardMode.CONSENSUS:
-        return load_consensus_gold_standards(gs_dir)
-    # else if mode == GoldStandardMode.INDIVIDUAL:
-    return load_individual_gold_standards(gs_dir)
 
 
 def link_gold_standard(links, inuktitut_root, english_root):
@@ -260,32 +240,6 @@ def extract_and_align_gold_standard(file_prefix: str):
     return link_gold_standard(links, inuktitut_root, english_root)
 
 
-def serialize_gold_standards(
-    input_path: str,
-    output_path: str,
-    mode: GoldStandardMode = GoldStandardMode.CONSENSUS,
-):
-    """
-    Loads the gold standard data for a specified mode and file prefix and saves it as a parquet file for fast access.
-
-    Args:
-        gs_dir (str): The directory containing the gold standard files.
-        mode (GoldStandardMode): Specifies which gold standard files to load.
-
-    Returns:
-        pd.DataFrame: The loaded gold standard data.
-    """
-    print("Loading Inuktitut Gold Standard")
-    if mode == GoldStandardMode.CONSENSUS:
-        gold_standard_df = load_consensus_gold_standards(input_path)
-        gold_standard_df.to_parquet(output_path)
-        return
-    if mode == GoldStandardMode.INDIVIDUAL:
-        gold_standard_df = load_individual_gold_standards(input_path)
-        gold_standard_df.to_parquet(output_path)
-        return
-
-
 def load_consensus_gold_standards(gs_dir: str):
     """
     Load consensus gold standards from the given directory.
@@ -335,34 +289,71 @@ def load_individual_gold_standards(gs_dir: str):
 
     return pd.concat(gs_dfs, ignore_index=True)
 
+
+def serialize_gold_standards(
+    input_path: str,
+    output_path: str,
+    mode: GOLD_STANDARD_MODES = 'consensus',
+):
+    """
+    Loads the gold standard data for a specified mode and file prefix and saves it as a parquet file for fast access.
+
+    Args:
+        input_path (str): The directory containing the gold standard files.
+        output_path (str): The path and file name for resultant parquet file.
+        mode (GOLD_STANDARD_MODES): Specifies which gold standard files to load, valid types are 'consensus' and 'individual.
+    """
+    enforce_literals(serialize_gold_standards)
+
+    print("Loading and Serializing Inuktitut Gold Standard")
+    if os.path.exists(output_path):
+        print("Serialized gold standard already exists... skipping")
+        return
+    if mode == 'consensus':
+        gold_standard_df = load_consensus_gold_standards(input_path)
+        gold_standard_df.to_parquet(output_path)
+        return
+    if mode == 'individual':
+        gold_standard_df = load_individual_gold_standards(input_path)
+        gold_standard_df.to_parquet(output_path)
+        return
+
+
 #TODO double check cree serializing works properly, I have it set up improperly in zero_shot.py
 def serialize_parallel_corpus(
     input_path: str,
     output_path: str,
-    split: str = 'test',
-    mode: LanguageMode = LanguageMode.INUKTITUT,
+    split: SPLITS = 'test',
+    language_mode: SOURCE_LANGUAGES = 'inuktitut',
 ):
     """
     Serializes the parallel corpus to a parquet file. Does not run if the file already exists.
 
     Args:
-        path (str, optional): Filepath to save the serialized parallel corpus. Defaults to '/data/serialized/syllabic_parallel_corpus.parquet'.
+        input_path (str): Filepath to Inuktitut or Cree data to be serialized
+        output_path (str): Filepath to save the serialized parallel corpus.
+        split (SPLITS): Split for Inuktitut data only. Defaults to 'test'.
+        mode (SOURCE_LANGUAGES): Mode for selecting language to serialize. Defaults to 'inuktitut'.
     """
-    if mode == LanguageMode.INUKTITUT:
-        print("Serializing Inuktitut parallel corpus")
-        parallel_corpus_df = load_inuktitut_parallel_corpus(input_path)
+    enforce_literals(serialize_parallel_corpus)
+    if os.path.exists(output_path):
+        print("Serialized parallel corpus already exists... skipping")
+        return
+    if mode == 'inuktitut':
+        print(f"Serializing Inuktitut parallel corpus to {output_path}")
+        parallel_corpus_df = load_inuktitut_parallel_corpus(input_path, split=split)
         parallel_corpus_df.to_parquet(output_path)
         return
-    if mode == LanguageMode.CREE:
-        print("Serializing Cree parallel corpus")
+    if mode == 'cree':
+        print(f"Serializing Cree parallel corpus to {output_path}")
         parallel_corpus_df = load_cree_parallel_data(input_path)
         parallel_corpus_df.to_parquet(output_path)
         return
 
 
-def generate_n_shot_examples(gold_standard, n_shots):
+def generate_n_shot_examples(gold_standard: pd.DataFrame, n_shots: int):
     """
-    Selects a random subset of examples from the gold standard.
+    Selects a random subset of examples from the gold standard and formats into a string to pass to language model.
 
     Args:
         gold_std (pandas.DataFrame): The gold standard dataframe.

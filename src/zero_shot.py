@@ -10,7 +10,7 @@ from IPython.display import display
 
 from llama3_inference import TransformersWrapper
 
-from utils import LanguageMode, eval_results, serialize_parallel_corpus
+from utils import eval_results
 
 project_dir = os.path.join(os.path.dirname(__file__), os.pardir)
 dotenv_path = os.path.join(project_dir, ".env")
@@ -54,7 +54,7 @@ SERIALIZED_CREE_PATH = os.path.join(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Define Parameters")
-    parser.add_argument('source_language', type=str, default='Inuktitut', choices=['Inuktitut', 'Cree'] , help='Language to perform experiments on')
+    parser.add_argument('source_language', type=str, default='Inuktitut', choices=['inuktitut', 'cree'] , help='Language to perform experiments on')
     parser.add_argument('-m', '--model_path', type=str, default="~/projects/def-zhu2048/cambish/llama3_1_8b_instruct", help="Location of model files")
     parser.add_argument('-n','--n_samples', type=int, default=1000, help="Number of samples to test from dataset")
     parser.add_argument('-t',"--temp", type=float, default=0.0, help = "temperature for sampling")
@@ -65,10 +65,7 @@ if __name__ == '__main__':
     # split model path and use last directory as name
     MODEL_NAME = args.model_path.split('/')[-1]
     
-    if args.source_language == 'Inuktitut':
-        LANGUAGE_MODE = LanguageMode.INUKTITUT
-    else:
-        LANGUAGE_MODE = LanguageMode.CREE
+    SOURCE_LANGUAGE = args.source_language
     
     #TODO Load data using utils
     
