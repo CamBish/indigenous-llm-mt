@@ -339,12 +339,12 @@ def serialize_parallel_corpus(
     if os.path.exists(output_path):
         print("Serialized parallel corpus already exists... skipping")
         return
-    if mode == 'inuktitut':
+    if language_mode == 'inuktitut':
         print(f"Serializing Inuktitut parallel corpus to {output_path}")
         parallel_corpus_df = load_inuktitut_parallel_corpus(input_path, split=split)
         parallel_corpus_df.to_parquet(output_path)
         return
-    if mode == 'cree':
+    if language_mode == 'cree':
         print(f"Serializing Cree parallel corpus to {output_path}")
         parallel_corpus_df = load_cree_parallel_data(input_path)
         parallel_corpus_df.to_parquet(output_path)
