@@ -3,10 +3,10 @@
 #SBATCH --time=0-0:15:00
 
 
-cd ~/$projects/indigenous-ll-mt
+cd $project/indigenous-llm-mt
 module purge
 module load python/3.11
 
-cd src/scripts
+cd src
 
 python simple_test.py
