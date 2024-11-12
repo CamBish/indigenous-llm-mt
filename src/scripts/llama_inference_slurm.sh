@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=train_llm          # Job name
+#SBATCH --job-name=inference_llama    # Job name
 #SBATCH --nodes=1                     # Number of nodes
 #SBATCH --ntasks-per-node=1           # Number of tasks per node
 #SBATCH --cpus-per-task=32            # Number of CPU cores per task
@@ -45,5 +45,5 @@ export WANDB_MODE=offline
 export HF_HUB_OFFLINE=1
 
 # Launch the training with torchrun
-python ./llama3_inference.py
+python ./llama3_inference.py --model-path ~/projects/def-zhu2048/cambish/indigenous-llm-mt/models/Llama-3.1-8B-Instruct
 
