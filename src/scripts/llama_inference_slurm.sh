@@ -10,14 +10,14 @@
 #SBATCH --error=./slurm_out/test_llama_inference-%j.err
 
 cd $project/indigenous-llm-mt/src
-module purge
-module load StdEnv/2023
-module load python/3.11 arrow/17.0.0
 
-pip install --upgrade pip --no-index
+module load StdEnv/2023
+ml cuda python/3.11 arrow/17.0.0 gcc
 
 virtualenv --no-download $SLURM_TMPDIR/env
 source $SLURM_TMPDIR/env/bin/activate
+
+pip install --upgrade pip --no-index
 
 pip install --no-index torch scikit_learn tqdm nltk torchtext transformers>=4.43.1 spacy triton accelerate datasets scipy matplotlib numpy huggingface_hub ipython
 
