@@ -3,6 +3,7 @@ data/
 .DS_Store
 models/
 src/scripts/slurm_out/
+.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
