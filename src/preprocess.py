@@ -1,10 +1,13 @@
+#%%
 # import argparse
 import os
 
-from typing import Literal
+from typing import Literal, get_args
+
+# from IPython.display import display
 
 from utils import SPLITS
-from utils import serialize_parallel_corpus, serialize_gold_standards
+from utils import serialize_parallel_corpus, serialize_gold_standards, load_inuktitut_parallel_corpus, inuktitut_process_and_filter, load_cree_parallel_data, fix_cree_punctuation
 
 DATA_MODES = Literal['parallel_corpus', 'gold_standard']
 
@@ -52,35 +55,39 @@ GOLD_STANDARD_PATH = os.path.join(
     "gold-standard",
 )
 
+#%%
 if __name__ == '__main__':
     # Serialize all splits of Inuktitut data, for both Roman and Syllabic scripts
-    for split in SPLITS:
+    for split in get_args(SPLITS):
+
+        # Serialize and preprocess Syllabic Inuktitut
         SERIALIZED_INUKTITUT_SYLLABIC_PATH = os.path.join(
             project_dir, "data", "serialized", f"{split}_syllabic_parallel_corpus.parquet"
         )
-        serialize_parallel_corpus(
-            input_path=INUKTITUT_SYLLABIC_PATH,
-            output_path=SERIALIZED_INUKTITUT_SYLLABIC_PATH,
-            split=split,
-            mode='inuktitut',
-        )
+        syllabic_parallel_corpus = load_inuktitut_parallel_corpus(INUKTITUT_SYLLABIC_PATH, split=split)
+        syllabic_parallel_corpus = inuktitut_process_and_filter(syllabic_parallel_corpus)
+        syllabic_parallel_corpus.to_parquet(SERIALIZED_INUKTITUT_SYLLABIC_PATH)
 
+        # Serialize and preprocess Romanized Inuktitut
         SERIALIZED_INUKTITUT_ROMAN_PATH = os.path.join(
             project_dir, "data", "serialized", f"{split}_roman_parallel_corpus.parquet"
         )
-        serialize_parallel_corpus(
-            input_path=INUKTITUT_ROMAN_PATH,
-            output_path=SERIALIZED_INUKTITUT_ROMAN_PATH,
-            split=split,
-            mode='inuktitut',
-        )
+        roman_parallel_corpus = load_inuktitut_parallel_corpus(INUKTITUT_ROMAN_PATH, split=split)
+        roman_parallel_corpus = inuktitut_process_and_filter(roman_parallel_corpus)
+        roman_parallel_corpus.to_parquet(SERIALIZED_INUKTITUT_ROMAN_PATH)
 
-    serialize_parallel_corpus(
-        input_path=SERIALIZED_CREE_PATH,
-        output_path=SERIALIZED_CREE_PATH,
-        mode='cree',
-    )
+    cree_parallel_corpus = load_cree_parallel_data(CREE_PATH)
+    cree_parallel_corpus = cree_parallel_corpus.applymap(fix_cree_punctuation)
+    print(cree_parallel_corpus)
+    cree_parallel_corpus.to_parquet(SERIALIZED_CREE_PATH)
 
-    serialize_gold_standards(
-        input_path=GOLD_STANDARD_PATH, output_path=SERIALIZED_GOLD_STANDARD_PATH
-    )
+    # serialize_parallel_corpus(
+    #     input_path=SERIALIZED_CREE_PATH,
+    #     output_path=SERIALIZED_CREE_PATH,
+    #     mode='cree',
+    # )
+
+    # serialize_gold_standards(
+    #     input_path=GOLD_STANDARD_PATH, output_path=SERIALIZED_GOLD_STANDARD_PATH
+    # )
+# %%

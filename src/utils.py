@@ -1,5 +1,6 @@
 import os
 import re
+from html import unescape
 from typing import Dict, List, Set, Literal, get_args, get_origin
 from sys import _getframe
 
@@ -156,7 +157,7 @@ def load_cree_parallel_data(input_directory: str) -> pd.DataFrame:
                 cree_text.extend(temp_data["source_text"])
                 english_text.extend(temp_data["target_text"])
 
-    return pd.DataFrame({"cree_text": cree_text, "english_text": english_text})
+    return pd.DataFrame({"source_text": cree_text, "target_text": english_text})
 
 
 def link_gold_standard(links, inuktitut_root, english_root):
@@ -319,6 +320,68 @@ def serialize_gold_standards(
         return
 
 
+def fix_cree_punctuation(text:str):
+    # Remove spaces before punctuation marks
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)
+    # Ensure exactly one space after punctuation marks (except at the end of the sentence)
+    text = re.sub(r'([.,!?;:])\s+', r'\1 ', text)
+    # Fix improper apostrophe spacing
+    text = re.sub(r"\s+'s\b", r"'s", text)  # Attach 's to the preceding word
+    text = re.sub(r"\b'\s+", r"'", text)    # Remove spaces after leading apostrophes
+    # Strip any extra spaces from the start and end of the text
+    return text.strip()
+
+
+def clean_and_process_inuktitut_text(text:str):
+    """Cleans Inuktitut text by fixing spacing between punctuation, replacing errant HTML entities, and removing other preprocessing artifacts
+
+    Args:
+        text (str): Input string to be cleaned
+
+    Returns:
+        str: cleaned string
+    """
+    # Fix spaces around punctuation
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)  # Remove space before punctuation
+    text = re.sub(r'([.,!?;:])\s+', r'\1 ', text)  # Ensure single space after punctuation
+    # Replace HTML entities and special cases
+    text = unescape(text).replace("@-@", "-")
+    return text.strip()
+
+
+def word_count_excluding_punctuation(text:str):
+    """Helper function to get word count without including punctuation
+
+    Args:
+        text (str): Input string to get word count of
+
+    Returns:
+        int: length of input string without punctuation
+    """
+    # Remove punctuation before counting words
+    text_without_punctuation = re.sub(r'[^\w\s]', '', text)
+    return len(text_without_punctuation.split())
+
+
+def inuktitut_process_and_filter(df: pd.DataFrame, column_to_filter="target_text", min_word_count=4):
+    """Preprocess Inuktitut text data to fix punctuation spacing, remove HTML entities, and fix other noisy parts of text.
+    Also filters out texts shorter than min_word_count.
+
+    Args:
+        df (pd.DataFrame): Corpus DataFrame to process text on
+        column_to_filter (str, optional): Which column to filter based on word count. Defaults to "target_text".
+        min_word_count (int, optional): Minimum word count for inclusion. Defaults to 4.
+
+    Returns:
+        _type_: _description_
+    """
+    # Apply cleaning and processing to text columns
+    df["source_text"] = df["source_text"].apply(clean_and_process_inuktitut_text)
+    df["target_text"] = df["target_text"].apply(clean_and_process_inuktitut_text)
+    # Filter rows based on word count in the specified column
+    return df[df[column_to_filter].apply(word_count_excluding_punctuation) > min_word_count]
+
+
 #TODO double check cree serializing works properly, I have it set up improperly in zero_shot.py
 def serialize_parallel_corpus(
     input_path: str,
@@ -336,9 +399,6 @@ def serialize_parallel_corpus(
         mode (SOURCE_LANGUAGES): Mode for selecting language to serialize. Defaults to 'inuktitut'.
     """
     enforce_literals(serialize_parallel_corpus)
-    if os.path.exists(output_path):
-        print("Serialized parallel corpus already exists... skipping")
-        return
     if language_mode == 'inuktitut':
         print(f"Serializing Inuktitut parallel corpus to {output_path}")
         parallel_corpus_df = load_inuktitut_parallel_corpus(input_path, split=split)
