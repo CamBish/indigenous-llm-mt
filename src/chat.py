@@ -3,7 +3,14 @@ import os
 from time import sleep
 
 import openai
+
 from dotenv import load_dotenv
+
+from utils import get_project_root
+
+project_dir = get_project_root(os.path.abspath(os.path.dirname(__file__)))
+dotenv_path = os.path.join(project_dir, ".env")
+load_dotenv(dotenv_path)
 
 
 def openai_chat_completion(
@@ -54,9 +61,6 @@ def openai_chat_completion(
 
 
 if __name__ == "__main__":
-    project_dir = os.path.join(os.path.dirname(__file__), os.pardir)
-    dotenv_path = os.path.join(project_dir, ".env")
-    load_dotenv(dotenv_path)
     
     client = openai.OpenAI()
     

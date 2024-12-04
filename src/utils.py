@@ -1,8 +1,8 @@
 import os
 import re
-from html import unescape
 from typing import Dict, List, Set, Literal, get_args, get_origin
 from sys import _getframe
+from collections import defaultdict
 
 import pandas as pd
 from defusedxml import ElementTree as ET
@@ -36,6 +36,15 @@ def enforce_literals(function):
         if get_origin(type_) is Literal and name in kwargs and value not in options:
             raise AssertionError(f"'{value}' is not in {options} for '{name}'")
 
+
+def get_project_root(current_path, marker='.git'):
+    while current_path != os.path.dirname(current_path):  # Check if we're at the root directory
+        if marker in os.listdir(current_path):
+            return current_path
+        current_path = os.path.dirname(current_path)
+    return None
+
+
 def eval_results(res_df: pd.DataFrame):
     """
     Calculates the BLEU scores for each translation in the given DataFrame and adds the scores as a new column.
@@ -60,6 +69,7 @@ def eval_results(res_df: pd.DataFrame):
 
     return res_df
 
+
 def get_file_prefixes(gs_1_path: str, gs_2_path: str) -> Set[str]:
     """
     Get unique file prefixes from the gold standard paths.
@@ -81,6 +91,7 @@ def get_file_prefixes(gs_1_path: str, gs_2_path: str) -> Set[str]:
         os.path.join(gs_2_path, filename.split(".")[0]) for filename in gs_2_files
     }
     return gs_1_prefixes.union(gs_2_prefixes)
+
 
 def load_parallel_text_data(
     source_directory: str,
@@ -142,18 +153,31 @@ def load_cree_parallel_data(input_directory: str) -> pd.DataFrame:
     """
     cree_text = []
     english_text = []
-    filenames = []
 
-    for _, _, files in os.walk(input_directory):
-        filenames.extend(files)
+    # Gather all file paths
+    filepaths = []
+    for root, _, files in os.walk(input_directory):
+        for file in files:
+            filepaths.append(os.path.join(root, file))
 
-    for filename in filenames:
-        if filename.endswith("_cr.txt"):
-            source_path = os.path.join(input_directory, filename)
-            target_path = os.path.join(input_directory, filename.replace("_cr.txt", "_en.txt"))
+    print(f"Collected file paths: {filepaths}")
 
-            if target_path:
-                temp_data = load_parallel_text_data(source_path, target_path)
+    # Find pairs of text
+    grouped_files = defaultdict(dict)
+    for filepath in filepaths:
+        if filepath.endswith("_cr.txt") or filepath.endswith("_en.txt"):
+            base_name = os.path.basename(filepath)[:-7]  # Remove `_cr.txt` or `_en.txt`
+            suffix = filepath[-6:-4]  # Extract `_cr` or `_en`
+            grouped_files[base_name][suffix] = filepath
+
+    # Process valid pairs
+    for _, files in grouped_files.items():
+        if "cr" in files and "en" in files:
+            source_path = files["cr"]
+            target_path = files["en"]
+
+            temp_data = load_parallel_text_data(source_path, target_path)
+            if temp_data:
                 cree_text.extend(temp_data["source_text"])
                 english_text.extend(temp_data["target_text"])
 
@@ -320,69 +344,6 @@ def serialize_gold_standards(
         return
 
 
-def fix_cree_punctuation(text:str):
-    # Remove spaces before punctuation marks
-    text = re.sub(r'\s+([.,!?;:])', r'\1', text)
-    # Ensure exactly one space after punctuation marks (except at the end of the sentence)
-    text = re.sub(r'([.,!?;:])\s+', r'\1 ', text)
-    # Fix improper apostrophe spacing
-    text = re.sub(r"\s+'s\b", r"'s", text)  # Attach 's to the preceding word
-    text = re.sub(r"\b'\s+", r"'", text)    # Remove spaces after leading apostrophes
-    # Strip any extra spaces from the start and end of the text
-    return text.strip()
-
-
-def clean_and_process_inuktitut_text(text:str):
-    """Cleans Inuktitut text by fixing spacing between punctuation, replacing errant HTML entities, and removing other preprocessing artifacts
-
-    Args:
-        text (str): Input string to be cleaned
-
-    Returns:
-        str: cleaned string
-    """
-    # Fix spaces around punctuation
-    text = re.sub(r'\s+([.,!?;:])', r'\1', text)  # Remove space before punctuation
-    text = re.sub(r'([.,!?;:])\s+', r'\1 ', text)  # Ensure single space after punctuation
-    # Replace HTML entities and special cases
-    text = unescape(text).replace("@-@", "-")
-    return text.strip()
-
-
-def word_count_excluding_punctuation(text:str):
-    """Helper function to get word count without including punctuation
-
-    Args:
-        text (str): Input string to get word count of
-
-    Returns:
-        int: length of input string without punctuation
-    """
-    # Remove punctuation before counting words
-    text_without_punctuation = re.sub(r'[^\w\s]', '', text)
-    return len(text_without_punctuation.split())
-
-
-def inuktitut_process_and_filter(df: pd.DataFrame, column_to_filter="target_text", min_word_count=4):
-    """Preprocess Inuktitut text data to fix punctuation spacing, remove HTML entities, and fix other noisy parts of text.
-    Also filters out texts shorter than min_word_count.
-
-    Args:
-        df (pd.DataFrame): Corpus DataFrame to process text on
-        column_to_filter (str, optional): Which column to filter based on word count. Defaults to "target_text".
-        min_word_count (int, optional): Minimum word count for inclusion. Defaults to 4.
-
-    Returns:
-        _type_: _description_
-    """
-    # Apply cleaning and processing to text columns
-    df["source_text"] = df["source_text"].apply(clean_and_process_inuktitut_text)
-    df["target_text"] = df["target_text"].apply(clean_and_process_inuktitut_text)
-    # Filter rows based on word count in the specified column
-    return df[df[column_to_filter].apply(word_count_excluding_punctuation) > min_word_count]
-
-
-#TODO double check cree serializing works properly, I have it set up improperly in zero_shot.py
 def serialize_parallel_corpus(
     input_path: str,
     output_path: str,
