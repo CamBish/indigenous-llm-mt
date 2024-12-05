@@ -1,78 +1,165 @@
+#%%
 import os
-# import re
-# import time
-import argparse
+import time
+from time import sleep
 
-import dotenv
-# import pandas as pd
-# import pyarrow.parquet as pq
+
+import openai
+from openai import OpenAI
+import pandas as pd
+
+from dotenv import load_dotenv
 # from IPython.display import display
 
-from llama3_inference import TransformersWrapper
+from utils import get_project_root
 
-# from utils import eval_results
-
-project_dir = os.path.join(os.path.dirname(__file__), os.pardir)
+project_dir = get_project_root(os.path.abspath(os.path.dirname(__file__)))
 dotenv_path = os.path.join(project_dir, ".env")
-dotenv.load_dotenv(dotenv_path)
+load_dotenv(dotenv_path)
 
-# define constants
-TARGET_LANGUAGE="English"
 
-#TODO redo for remote environment
-TEST_INUKTITUT_SYLLABIC_PATH = os.path.join(
+#--------------------------------------------------
+TEST_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
     project_dir,
     "data",
-    "external",
-    "Nunavut-Hansard-Inuktitut-English-Parallel-Corpus-3.0",
-    "split",
-    "test",
+    "serialized",
+    "test-dedup_syllabic_parallel_corpus.parquet"
 )
-
-TEST_INUKTITUT_ROMAN_PATH = os.path.join(
+DEV_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
     project_dir,
     "data",
-    "external",
-    "Nunavut-Hansard-Inuktitut-English-Parallel-Corpus-3.0",
-    "split",
-    "test",
+    "serialized",
+    "dev-dedup_syllabic_parallel_corpus.parquet"
 )
-
-TEST_SERIALIZED_INUKTITUT_SYLLABIC_PATH = os.path.join(
-    project_dir, "data", "serialized", "test_syllabic_parallel_corpus.parquet"
+DEVTEST_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
+    project_dir,
+    "data",
+    "serialized",
+    "devtest-dedup_syllabic_parallel_corpus.parquet"
 )
-TEST_SERIALIZED_INUKTITUT_ROMAN_PATH = os.path.join(
-    project_dir, "data", "serialized", "test_roman_parallel_corpus.parquet"
+#--------------------------------------------------
+TEST_DEDUP_INUKTITUT_ROMAN_PATH = os.path.join(
+    project_dir,
+    "data",
+    "serialized",
+    "test-dedup_roman_parallel_corpus.parquet"
 )
-SERIALIZED_GOLD_STANDARD_PATH = os.path.join(
-    project_dir, "data", "serialized", "gold_standard.parquet"
+DEV_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
+    project_dir,
+    "data",
+    "serialized",
+    "dev-dedup_roman_parallel_corpus.parquet"
 )
+DEVTEST_DEDUP_INUKTITUT_ROMAN_PATH = os.path.join(
+    project_dir,
+    "data",
+    "serialized",
+    "devtest-dedup_roman_parallel_corpus.parquet"
+)
+#--------------------------------------------------
 SERIALIZED_CREE_PATH = os.path.join(
     project_dir, "data", "serialized", "cree_corpus.parquet"
 )
+#--------------------------------------------------
+SOURCE_LANGUAGE = "Inuktitut"
+TARGET_LANGUAGE = "English"
 
+MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
 
+def zero_shot_machine_translation(
+    source_text:str,
+    temperature=0,
+    max_tokens=128,
+    stop=None,
+    n=None,
+    model=None,
+):
+    messages = [
+        {
+            "role": "system",
+            "content": f'You are a machine translation system that operates in two steps. The user will provide {SOURCE_LANGUAGE} text within square brackets. Romanize the text for use in the next step with a prefix that says "Romanization: ". Then, translate the romanized text into {TARGET_LANGUAGE} with a prefix that says "Translation: "',
+        },
+        {
+            "role": "user",
+            "content": f"Please provide the {TARGET_LANGUAGE} translation for the following sentences: {source_text}",
+        },
+    ]
+
+    json_data = {"model": MODEL,  "messages": messages}
+
+    if temperature is not None:
+        json_data["temperature"] = temperature
+    if max_tokens is not None:
+        json_data["max_tokens"] = max_tokens
+    if stop is not None:
+        json_data["stop"] = stop
+    if n is not None:
+        json_data["n"] = n
+
+    print("Source text to be translated:\n", source_text)
+    output = None
+    while output is None:
+        try:
+            output = client.chat.completions.create(**json_data)
+        except openai.OpenAIError as e:
+            print(e)
+            sleep(10)
+
+    print("Generated Output:\n", output.choices[0].message.content)
+    print("--------------------------------------------------")
+    return output.choices[0].message.content
+
+#%%
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Define Parameters")
-    parser.add_argument('source_language', type=str, default='Inuktitut', choices=['inuktitut', 'cree'] , help='Language to perform experiments on')
-    parser.add_argument('-m', '--model_path', type=str, default="~/projects/def-zhu2048/cambish/llama3_1_8b_instruct", help="Location of model files")
-    parser.add_argument('-n','--n_samples', type=int, default=1000, help="Number of samples to test from dataset")
-    parser.add_argument('-t',"--temp", type=float, default=0.0, help = "temperature for sampling")
-    parser.add_argument('-mx',"--max_len", type=int, default=200, help = "max number of tokens in answer")
-    args = parser.parse_args()
+    try:
+        openai.api_key = os.environ.get('OPENAI_API_KEY')
+        if openai.api_key is None:
+            raise Exception
+        else:
+            print("API Key Obtained Successfully!")
+    except Exception:
+        print("Error reading OpenAI API key from environment variable")
+        exit(1)
+
+    client = OpenAI()
+
+    inuktitut_syllabic_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_SYLLABIC_PATH)
+    inuktitut_romanized_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_ROMAN_PATH)
+
+    print("Loaded data")
+
+    print("Generating Translation Results")
+    start_time = time.perf_counter()
+    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df["source_text"].apply(zero_shot_machine_translation)
+    end_time = time.perf_counter()
+
+    elapsed_time = end_time - start_time
+    print("Total time elapsed:", elapsed_time)
+    average_time = elapsed_time / len(inuktitut_syllabic_df.index)
+    print("Average processing time:", average_time)
     
-    #TODO parse arguments - especially data file paths
-    # split model path and use last directory as name
-    MODEL_NAME = args.model_path.split('/')[-1]
+    romanized_pattern = r"Romanization: (.+)\n"
+    translated_pattern = r"Translation: (.+)\n"
     
-    SOURCE_LANGUAGE = args.source_language
+    inuktitut_syllabic_df["romanized_text"] = inuktitut_syllabic_df["response"].str.extract(romanized_pattern)
+    inuktitut_syllabic_df["translated_text"] = inuktitut_syllabic_df["response"].str.extract(translated_pattern)
     
-    #TODO Load data using utils
+    inuktitut_syllabic_df["romanized_truth"] = inuktitut_romanized_df["source_text"]
     
+    out_dir = os.path.join(
+        project_dir,
+        "src",
+        "results",
+        MODEL
+    )
     
-    #TODO create prompts
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
     
+    out_path = os.path.join(
+        out_dir,
+        "syllabic-zero-shot.parquet"
+    )
     
-    model = TransformersWrapper(model_path=args.model_path)
-    
-    #TODO model call + post processing
+    inuktitut_syllabic_df.to_parquet(out_path)
+# %%
