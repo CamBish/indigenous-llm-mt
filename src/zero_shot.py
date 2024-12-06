@@ -65,11 +65,12 @@ SOURCE_LANGUAGE = "Inuktitut"
 TARGET_LANGUAGE = "English"
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
+print("Working with:", MODEL)
 
 def zero_shot_machine_translation(
     source_text:str,
     temperature=0,
-    max_tokens=128,
+    max_tokens=200,
     stop=None,
     n=None,
     model=None,
