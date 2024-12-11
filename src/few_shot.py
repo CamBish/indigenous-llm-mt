@@ -2,20 +2,17 @@
 import os
 import time
 
-
 import openai
 from openai import OpenAI
 import pandas as pd
 
 from dotenv import load_dotenv
-# from IPython.display import display
 
 from utils import get_project_root
 
 project_dir = get_project_root(os.path.abspath(os.path.dirname(__file__)))
 dotenv_path = os.path.join(project_dir, ".env")
 load_dotenv(dotenv_path)
-
 
 #--------------------------------------------------
 TEST_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
@@ -60,42 +57,72 @@ SERIALIZED_CREE_PATH = os.path.join(
     project_dir, "data", "serialized", "cree_corpus.parquet"
 )
 #--------------------------------------------------
-SOURCE_LANGUAGE = "Inuktitut"
+SOURCE_LANGUAGE = "Inuktitut (Syllabic)"
 TARGET_LANGUAGE = "English"
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
 print("Working with:", MODEL)
 
-def zero_shot_machine_translation(
+def few_shot_machine_translation(
     source_text:str,
+    gold_standard:pd.DataFrame,
+    n_shots:int,
     temperature=0,
-    max_tokens=200,
+    max_completion_tokens=200,
     stop=None,
     n=None,
-    model=None,
+    model=MODEL
 ):
+    sys_prompt = f"""You are a machine translation system that operates in two steps.
+    
+    The user will provide the source text marked by [{SOURCE_LANGUAGE}]. 
+    Transliterate the text into Roman characters with the prefix [Inuktitut (Romanized)]:
+
+    Then translate the romanized text from before with the prefix [{TARGET_LANGUAGE}]:
+    """
+    # Select a random subset of examples from the gold standard
+    gold_standard_subset = gold_standard.sample(n=n_shots, replace=False)
+    
     messages = [
-        {
-            "role": "system",
-            "content": f'You are a machine translation system that operates in two steps. The user will provide {SOURCE_LANGUAGE} text within square brackets. Romanize the text for use in the next step with a prefix that says "Romanization: ". Then, translate the romanized text into {TARGET_LANGUAGE} with a prefix that says "Translation: "',
-        },
-        {
-            "role": "user",
-            "content": f"Please provide the {TARGET_LANGUAGE} translation for the following sentences: {source_text}",
-        },
+        {"role": "system", "content": sys_prompt},
     ]
 
+    # Make dict to store examples for few-shot prompting
+    examples = {
+        "source_text": gold_standard_subset["source_text"].to_list(),
+        "target_text": gold_standard_subset["target_text"].to_list()
+    }
+    # iterate through all examples and add them to messages
+    for example in examples:
+        example_prompt =[
+            {
+                "role": "user", 
+                "content": f"[{SOURCE_LANGUAGE}]: {example["source_text"]}",
+            },
+            {
+                "role": "assistant",
+                "content": f"[Inuktitut (Romanized)]:  \n [{TARGET_LANGUAGE}] {example["target_text"]}"
+            }
+        ]
+        messages.append(example_prompt)
+    
+    translation_prompt = {
+        "role": "user",
+        "content": f"[{SOURCE_LANGUAGE}]: {source_text} \n [{TARGET_LANGUAGE}]:"
+    }
+    messages.append(translation_prompt)
+    
     json_data = {"model": MODEL,  "messages": messages}
-
+    
     if temperature is not None:
         json_data["temperature"] = temperature
-    if max_tokens is not None:
-        json_data["max_tokens"] = max_tokens
+    if max_completion_tokens is not None:
+        json_data["max_tokens"] = max_completion_tokens
     if stop is not None:
         json_data["stop"] = stop
     if n is not None:
         json_data["n"] = n
-
+    
     print("Source text to be translated:\n", source_text)
     output = None
     while output is None:
@@ -109,7 +136,6 @@ def zero_shot_machine_translation(
     print("--------------------------------------------------")
     return output.choices[0].message.content
 
-#%%
 if __name__ == '__main__':
     try:
         openai.api_key = os.environ.get('OPENAI_API_KEY')
@@ -130,7 +156,7 @@ if __name__ == '__main__':
 
     print("Generating Translation Results")
     start_time = time.perf_counter()
-    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df["source_text"].apply(zero_shot_machine_translation)
+    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df["source_text"].apply(few_shot_machine_translation)
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
