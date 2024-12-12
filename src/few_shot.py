@@ -97,20 +97,23 @@ def few_shot_machine_translation(
     source_texts = gold_standard_subset["source_text"].tolist()
     target_texts = gold_standard_subset["target_text"].tolist()
 
-    messages.extend([
-        [
-            {"role": "user", "content": f"[{SOURCE_LANGUAGE}]: {src}"},
-            {"role": "assistant", "content": f"[Inuktitut (Romanized)]: \n[{TARGET_LANGUAGE}]: {tgt}"}
+    for source, target in zip(source_texts, target_texts):
+        example_prompt = [
+            {
+                "role": "user",
+                "content": f"[{SOURCE_LANGUAGE}]: {source}",
+            },
+            {
+                "role": "assistant",
+                "content": f"[{TARGET_LANGUAGE}]: {target}",
+            },
         ]
-        for src, tgt in zip(source_texts, target_texts)
-    ])
+        messages.extend(example_prompt)
 
-    
-    translation_prompt = {
+    messages.append({
         "role": "user",
         "content": f"[{SOURCE_LANGUAGE}]: {source_text} \n [{TARGET_LANGUAGE}]:"
-    }
-    messages.append(translation_prompt)
+    })
     
     json_data = {"model": MODEL,  "messages": messages}
     
@@ -153,20 +156,7 @@ if __name__ == '__main__':
     inuktitut_syllabic_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_SYLLABIC_PATH)
     inuktitut_romanized_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_ROMAN_PATH)
     inuktitut_gold_standard_df = pd.read_parquet(SERIALIZED_GOLD_STANDARD_PATH)
-
-    inuktitut_gold_standard_df.rename(columns={
-    "src_lang": "source_text",
-    "tgt_lang": "target_text"
-    }, inplace=True)
-    print(inuktitut_gold_standard_df.columns.tolist())
-
-
-    inuktitut_gold_standard_df.to_parquet(SERIALIZED_GOLD_STANDARD_PATH)
-
-
     print("Loaded data")
-
-    print(inuktitut_gold_standard_df)
 
     print("Generating Translation Results")
     start_time = time.perf_counter()

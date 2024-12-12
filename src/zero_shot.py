@@ -69,7 +69,7 @@ print("Working with:", MODEL)
 def zero_shot_machine_translation(
     source_text:str,
     temperature=0,
-    max_tokens=200,
+    max_completion_tokens=200,
     stop=None,
     n=None,
     model=None,
@@ -77,11 +77,11 @@ def zero_shot_machine_translation(
     messages = [
         {
             "role": "system",
-            "content": f'You are a machine translation system that operates in two steps. The user will provide {SOURCE_LANGUAGE} text within square brackets. Romanize the text for use in the next step with a prefix that says "Romanization: ". Then, translate the romanized text into {TARGET_LANGUAGE} with a prefix that says "Translation: "',
+            "content": "You are a machine translation system.",
         },
         {
             "role": "user",
-            "content": f"Please provide the {TARGET_LANGUAGE} translation for the following sentences: {source_text}",
+            "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
         },
     ]
 
@@ -89,8 +89,8 @@ def zero_shot_machine_translation(
 
     if temperature is not None:
         json_data["temperature"] = temperature
-    if max_tokens is not None:
-        json_data["max_tokens"] = max_tokens
+    if max_completion_tokens is not None:
+        json_data["max_tokens"] = max_completion_tokens
     if stop is not None:
         json_data["stop"] = stop
     if n is not None:
