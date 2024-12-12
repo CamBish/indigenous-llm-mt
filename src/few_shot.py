@@ -57,11 +57,18 @@ SERIALIZED_CREE_PATH = os.path.join(
     project_dir, "data", "serialized", "cree_corpus.parquet"
 )
 #--------------------------------------------------
-SOURCE_LANGUAGE = "Inuktitut (Syllabic)"
-TARGET_LANGUAGE = "English"
+SERIALIZED_GOLD_STANDARD_PATH = os.path.join(
+    project_dir, "data", "serialized", "gold_standard.parquet"
+)
+
+# Load environment variables from .env file
+SOURCE_LANGUAGE = os.environ.get("SOURCE_LANGUAGE", "Inuktitut (Syllabic)")
+TRANSLITERATION_LANGUAGE = os.environ.get("TRANSLITERATION_LANGUAGE", "Inuktitut (Romanized)")
+TARGET_LANGUAGE = os.environ.get("TARGET_LANGUAGE", "English")
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
 print("Working with:", MODEL)
+print(f"Translating from {SOURCE_LANGUAGE} to {TARGET_LANGUAGE}")
 
 def few_shot_machine_translation(
     source_text:str,
@@ -76,7 +83,7 @@ def few_shot_machine_translation(
     sys_prompt = f"""You are a machine translation system that operates in two steps.
     
     The user will provide the source text marked by [{SOURCE_LANGUAGE}]. 
-    Transliterate the text into Roman characters with the prefix [Inuktitut (Romanized)]:
+    Transliterate the text into Roman characters with the prefix [{TRANSLITERATION_LANGUAGE}]:
 
     Then translate the romanized text from before with the prefix [{TARGET_LANGUAGE}]:
     """
@@ -87,24 +94,17 @@ def few_shot_machine_translation(
         {"role": "system", "content": sys_prompt},
     ]
 
-    # Make dict to store examples for few-shot prompting
-    examples = {
-        "source_text": gold_standard_subset["source_text"].to_list(),
-        "target_text": gold_standard_subset["target_text"].to_list()
-    }
-    # iterate through all examples and add them to messages
-    for example in examples:
-        example_prompt =[
-            {
-                "role": "user", 
-                "content": f"[{SOURCE_LANGUAGE}]: {example["source_text"]}",
-            },
-            {
-                "role": "assistant",
-                "content": f"[Inuktitut (Romanized)]:  \n [{TARGET_LANGUAGE}] {example["target_text"]}"
-            }
+    source_texts = gold_standard_subset["source_text"].tolist()
+    target_texts = gold_standard_subset["target_text"].tolist()
+
+    messages.extend([
+        [
+            {"role": "user", "content": f"[{SOURCE_LANGUAGE}]: {src}"},
+            {"role": "assistant", "content": f"[Inuktitut (Romanized)]: \n[{TARGET_LANGUAGE}]: {tgt}"}
         ]
-        messages.append(example_prompt)
+        for src, tgt in zip(source_texts, target_texts)
+    ])
+
     
     translation_prompt = {
         "role": "user",
@@ -136,6 +136,7 @@ def few_shot_machine_translation(
     print("--------------------------------------------------")
     return output.choices[0].message.content
 
+#%%
 if __name__ == '__main__':
     try:
         openai.api_key = os.environ.get('OPENAI_API_KEY')
@@ -151,12 +152,25 @@ if __name__ == '__main__':
 
     inuktitut_syllabic_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_SYLLABIC_PATH)
     inuktitut_romanized_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_ROMAN_PATH)
+    inuktitut_gold_standard_df = pd.read_parquet(SERIALIZED_GOLD_STANDARD_PATH)
+
+    inuktitut_gold_standard_df.rename(columns={
+    "src_lang": "source_text",
+    "tgt_lang": "target_text"
+    }, inplace=True)
+    print(inuktitut_gold_standard_df.columns.tolist())
+
+
+    inuktitut_gold_standard_df.to_parquet(SERIALIZED_GOLD_STANDARD_PATH)
+
 
     print("Loaded data")
 
+    print(inuktitut_gold_standard_df)
+
     print("Generating Translation Results")
     start_time = time.perf_counter()
-    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df["source_text"].apply(few_shot_machine_translation)
+    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df['source_text'].apply(few_shot_machine_translation, args=(inuktitut_gold_standard_df,5))
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
@@ -165,7 +179,7 @@ if __name__ == '__main__':
     print("Average processing time:", average_time)
     
     romanized_pattern = r"Romanization: (.+)\n"
-    translated_pattern = r"Translation: (.+)\n"
+    translated_pattern = r"Translation: (.+)(\n|$)"
     
     inuktitut_syllabic_df["romanized_text"] = inuktitut_syllabic_df["response"].str.extract(romanized_pattern)
     inuktitut_syllabic_df["translated_text"] = inuktitut_syllabic_df["response"].str.extract(translated_pattern)

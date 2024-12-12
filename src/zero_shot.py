@@ -139,7 +139,7 @@ if __name__ == '__main__':
     print("Average processing time:", average_time)
     
     romanized_pattern = r"Romanization: (.+)\n"
-    translated_pattern = r"Translation: (.+)\n"
+    translated_pattern = r"Translation: (.+)(\n|$)"
     
     inuktitut_syllabic_df["romanized_text"] = inuktitut_syllabic_df["response"].str.extract(romanized_pattern)
     inuktitut_syllabic_df["translated_text"] = inuktitut_syllabic_df["response"].str.extract(translated_pattern)
