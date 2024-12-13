@@ -9,6 +9,7 @@ def find_parquet_files(directory):
                 parquet_files.append(os.path.join(root, file))
     return parquet_files
 
+#TODO Update so it doesn't rewrite files if they already exist
 # Function to convert Parquet to Excel
 def convert_parquet_to_excel(parquet_file):
     # Read the Parquet file

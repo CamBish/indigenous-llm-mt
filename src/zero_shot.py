@@ -138,13 +138,14 @@ if __name__ == '__main__':
     average_time = elapsed_time / len(inuktitut_syllabic_df.index)
     print("Average processing time:", average_time)
     
-    romanized_pattern = r"Romanization: (.+)\n"
-    translated_pattern = r"Translation: (.+)(\n|$)"
+    #%%
+    # romanized_pattern = r"Romanization: (.+)\n"
+    # translated_pattern = r"Translation: (.+)(\n|$)"
     
-    inuktitut_syllabic_df["romanized_text"] = inuktitut_syllabic_df["response"].str.extract(romanized_pattern)
-    inuktitut_syllabic_df["translated_text"] = inuktitut_syllabic_df["response"].str.extract(translated_pattern)
+    # inuktitut_syllabic_df["romanized_text"] = inuktitut_syllabic_df["response"].str.extract(romanized_pattern)
+    # inuktitut_syllabic_df["translated_text"] = inuktitut_syllabic_df["response"].str.extract(translated_pattern)
     
-    inuktitut_syllabic_df["romanized_truth"] = inuktitut_romanized_df["source_text"]
+    # inuktitut_syllabic_df["romanized_truth"] = inuktitut_romanized_df["source_text"]
     
     out_dir = os.path.join(
         project_dir,
