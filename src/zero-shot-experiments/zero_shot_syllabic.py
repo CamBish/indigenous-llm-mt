@@ -1,12 +1,18 @@
 #%%
 import os
 import time
+import sys
 
 import openai
 from openai import OpenAI
 import pandas as pd
 
 from dotenv import load_dotenv
+
+module_path = "/Users/cambish/code-base/indigenous-llm-mt/src"
+
+if module_path not in sys.path:
+    sys.path.append(module_path)
 
 from utils import get_project_root
 
@@ -111,7 +117,6 @@ if __name__ == '__main__':
     average_time = elapsed_time / len(inuktitut_syllabic_df.index)
     print("Average processing time:", average_time)
     
-    #%%
     out_dir = os.path.join(
         project_dir,
         "src",
