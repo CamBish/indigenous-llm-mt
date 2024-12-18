@@ -69,7 +69,7 @@ print("Working with:", MODEL)
 def zero_shot_machine_translation(
     source_text:str,
     temperature=0,
-    max_completion_tokens=200,
+    max_completion_tokens=350,
     stop=None,
     n=None,
     model=None,
@@ -138,7 +138,6 @@ if __name__ == '__main__':
     average_time = elapsed_time / len(inuktitut_syllabic_df.index)
     print("Average processing time:", average_time)
     
-    #%%
     # romanized_pattern = r"Romanization: (.+)\n"
     # translated_pattern = r"Translation: (.+)(\n|$)"
     
@@ -163,4 +162,5 @@ if __name__ == '__main__':
     )
     
     inuktitut_syllabic_df.to_parquet(out_path)
+    print("Saved results to disk")
 # %%

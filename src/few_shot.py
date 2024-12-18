@@ -188,7 +188,7 @@ if __name__ == '__main__':
     
     out_path = os.path.join(
         out_dir,
-        "syllabic-zero-shot.parquet"
+        "syllabic-few-shot.parquet"
     )
     
     inuktitut_syllabic_df.to_parquet(out_path)

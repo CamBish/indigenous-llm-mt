@@ -150,3 +150,4 @@ if __name__ == '__main__':
     serialize_gold_standards(
         input_path=GOLD_STANDARD_PATH, output_path=SERIALIZED_GOLD_STANDARD_PATH
     )
+# %%
