@@ -2,20 +2,17 @@
 import os
 import time
 
-
 import openai
 from openai import OpenAI
 import pandas as pd
 
 from dotenv import load_dotenv
-# from IPython.display import display
 
 from utils import get_project_root
 
 project_dir = get_project_root(os.path.abspath(os.path.dirname(__file__)))
 dotenv_path = os.path.join(project_dir, ".env")
 load_dotenv(dotenv_path)
-
 
 #--------------------------------------------------
 TEST_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
@@ -37,30 +34,7 @@ DEVTEST_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
     "devtest-dedup_syllabic_parallel_corpus.parquet"
 )
 #--------------------------------------------------
-TEST_DEDUP_INUKTITUT_ROMAN_PATH = os.path.join(
-    project_dir,
-    "data",
-    "serialized",
-    "test-dedup_roman_parallel_corpus.parquet"
-)
-DEV_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
-    project_dir,
-    "data",
-    "serialized",
-    "dev-dedup_roman_parallel_corpus.parquet"
-)
-DEVTEST_DEDUP_INUKTITUT_ROMAN_PATH = os.path.join(
-    project_dir,
-    "data",
-    "serialized",
-    "devtest-dedup_roman_parallel_corpus.parquet"
-)
-#--------------------------------------------------
-SERIALIZED_CREE_PATH = os.path.join(
-    project_dir, "data", "serialized", "cree_corpus.parquet"
-)
-#--------------------------------------------------
-SOURCE_LANGUAGE = "Inuktitut"
+SOURCE_LANGUAGE = "Inuktitut (Syllabic)"
 TARGET_LANGUAGE = "English"
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
@@ -124,7 +98,6 @@ if __name__ == '__main__':
     client = OpenAI()
 
     inuktitut_syllabic_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_SYLLABIC_PATH)
-    inuktitut_romanized_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_ROMAN_PATH)
 
     print("Loaded data")
 
@@ -138,14 +111,7 @@ if __name__ == '__main__':
     average_time = elapsed_time / len(inuktitut_syllabic_df.index)
     print("Average processing time:", average_time)
     
-    # romanized_pattern = r"Romanization: (.+)\n"
-    # translated_pattern = r"Translation: (.+)(\n|$)"
-    
-    # inuktitut_syllabic_df["romanized_text"] = inuktitut_syllabic_df["response"].str.extract(romanized_pattern)
-    # inuktitut_syllabic_df["translated_text"] = inuktitut_syllabic_df["response"].str.extract(translated_pattern)
-    
-    # inuktitut_syllabic_df["romanized_truth"] = inuktitut_romanized_df["source_text"]
-    
+    #%%
     out_dir = os.path.join(
         project_dir,
         "src",
