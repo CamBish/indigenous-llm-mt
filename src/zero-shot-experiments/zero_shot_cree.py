@@ -7,7 +7,7 @@ from openai import OpenAI
 import pandas as pd
 
 from dotenv import load_dotenv
-# from IPython.display import display
+from IPython.display import display
 
 from utils import get_project_root
 
@@ -85,6 +85,7 @@ if __name__ == '__main__':
 
     plains_cree_df = pd.read_parquet(SERIALIZED_CREE_PATH)
     print("Loaded data")
+
 
     print("Generating Translation Results")
     start_time = time.perf_counter()

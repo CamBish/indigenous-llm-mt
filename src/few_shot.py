@@ -63,7 +63,6 @@ SERIALIZED_GOLD_STANDARD_PATH = os.path.join(
 
 # Load environment variables from .env file
 SOURCE_LANGUAGE = os.environ.get("SOURCE_LANGUAGE", "Inuktitut (Syllabic)")
-TRANSLITERATION_LANGUAGE = os.environ.get("TRANSLITERATION_LANGUAGE", "Inuktitut (Romanized)")
 TARGET_LANGUAGE = os.environ.get("TARGET_LANGUAGE", "English")
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
@@ -80,18 +79,11 @@ def few_shot_machine_translation(
     n=None,
     model=MODEL
 ):
-    sys_prompt = f"""You are a machine translation system that operates in two steps.
-    
-    The user will provide the source text marked by [{SOURCE_LANGUAGE}]. 
-    Transliterate the text into Roman characters with the prefix [{TRANSLITERATION_LANGUAGE}]:
-
-    Then translate the romanized text from before with the prefix [{TARGET_LANGUAGE}]:
-    """
     # Select a random subset of examples from the gold standard
     gold_standard_subset = gold_standard.sample(n=n_shots, replace=False)
-    
+
     messages = [
-        {"role": "system", "content": sys_prompt},
+        {"role": "system", "content": "You are a machine translation system."},
     ]
 
     source_texts = gold_standard_subset["source_text"].tolist()

@@ -1,4 +1,6 @@
+#%%
 import os
+import re
 import pandas as pd
 
 def find_parquet_files(directory):
@@ -40,7 +42,81 @@ def convert_parquet_to_excel(parquet_file):
     df.to_excel(output_file, index=False)
     print(f"Converted {parquet_file} to {output_file}")
 
+def extract_translation(text):
+    patterns = [
+        r"\[English\]:\s*(.*?)(?:\n|$)",             # Capture text after [English]:
+        r"Translation:\s*\"(.*?)\"",                # Capture text in quotes after Translation:
+        r"translates to:\s*\"(.*?)\"",              # Capture text in quotes after translates to:
+        r"translates to:\s*(.*?)(?:\n|$)"           # Capture text after translates to: without quotes
+    ]
+
+    translations = []
+
+    for pattern in patterns:
+        matches = re.findall(pattern, text, re.DOTALL)
+        translations.extend(matches)  # Collect all matches
+
+    # Clean up the translations (e.g., strip extra whitespace)
+    translations = [t.strip() for t in translations]
+    
+    return translations
+
+#%%
 if __name__ == "__main__":
+    
+    examples = [
+        '''
+        [Inuktitut]: ᐅᖃᖅᑎ ( ᐊᖓᔪᖅᑳᖅ ᔪᐊᔾ ᖁᓚᐅᑦ ): ᑐᒃᓯᐊᕐᓂᒃᑯᑦ ᐅᒃᑯᐃᕈᓐᓇᖅᐱᐅᒃ, ᒥᔅᑐ ᕿᓐᖑᖅ.
+        [English]: Uqaqti (Angajuqaq Juaj Qallut): Tukisianiikuttuq ukuaqirunnanqapiuk, mista qinnguq.
+
+        Translation: Uqaqti (Angajuqaq Juaj Qallut
+        ''',
+        '''
+        (Inuktitut text) 
+
+        Here is the translation:
+
+        "Hello, in Nunavut, the Inuit are the majority, and the Inuktitut language is the most widely spoken language, and it is the working language of the government, and it is also the language of instruction in schools."
+        ''',
+        '''
+        (Inuktitut text provided)
+
+        Here is the translation:
+
+        [English]: The Inuit have traditionally been fishers and hunters, and still hunt and fish to this day, but many Inuit have also become involved in the tourism and service industries.
+        ''',
+        '''
+        ᐅᖃᖅᑏ, ᐅᑯᐊ ᖁᕕᐊᓲᑎᒋᔪᒪᕙᒃᑲ:
+
+        Translation: "Hello, how are you today?"
+        ''',
+        '''
+        I'm happy to help with the translation!
+
+        ᖁᔭᓕᑦᑎᐊᖅᐳᖓ ᐊᒃᓱᐊᓗᒃ translates to:
+
+
+        "I'm happy to see you."
+
+        Here's a breakdown of the translation:
+
+        * ᖁᔭᓕᑦᑎᐊᖅᐳᖓ (kuujjautiqaqpuqunga) means "I'm happy" or "I'm glad"
+        * ᐊᒃᓱᐊᓗᒃ (akusualuk) means "to see you" or "to see someone"
+
+        Note: Inuktitut is a polysynthetic language, which means that words are composed of many morphemes that convey different meanings. The translation may not be word-for-word, but rather
+        '''
+    ]
+    
+
+
+    for i, example in enumerate(examples, 1):
+        print(f"Example {i}:")
+        translations = extract_translation(example)
+        for t in translations:
+            print(f"  - {t}")
+        print()
+
+#%%
     # Define the input directory
     input_directory = "/Users/cambish/code-base/indigenous-llm-mt/src/results"
     

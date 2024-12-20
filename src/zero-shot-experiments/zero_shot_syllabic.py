@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 module_path = "/Users/cambish/code-base/indigenous-llm-mt/src"
 
 if module_path not in sys.path:
+    print("test")
     sys.path.append(module_path)
 
 from utils import get_project_root
