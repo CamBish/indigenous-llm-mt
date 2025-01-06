@@ -3,6 +3,8 @@ import os
 import re
 import pandas as pd
 
+from sacrebleu.metrics import BLEU, CHRF
+
 def find_parquet_files(directory):
     """Finds a list of all nested parquet files in a given directory
 
@@ -44,10 +46,10 @@ def convert_parquet_to_excel(parquet_file):
 
 def extract_translation(text):
     patterns = [
-        r"\[English\]:\s*(.*?)(?:\n|$)",             # Capture text after [English]:
+        r"\[English\]:\s*(.*?)(?:\n|$)",            # Capture text after [English]:
         r"Translation:\s*\"(.*?)\"",                # Capture text in quotes after Translation:
-        r"translates to:\s*\"(.*?)\"",              # Capture text in quotes after translates to:
-        r"translates to:\s*(.*?)(?:\n|$)"           # Capture text after translates to: without quotes
+        r"translates to:\s*(.*?)(?:\n|$)",          # Capture text after translates to: without quotes
+        r"translation:\s*(.*?)(?:\n|$)",            # Capture text after translation:
     ]
 
     translations = []
@@ -56,65 +58,70 @@ def extract_translation(text):
         matches = re.findall(pattern, text, re.DOTALL)
         translations.extend(matches)  # Collect all matches
 
-    # Clean up the translations (e.g., strip extra whitespace)
-    translations = [t.strip() for t in translations]
-    
+    # Clean up the translations (e.g., strip extra whitespace and remove [English]: prefix)
+    translations = [t.strip(' "').removeprefix("[English]: ") for t in translations]
+    # remove duplicate strings
+    translations = [t for t in set(translations)]
+
     return translations
+
+def clean_results(text:str):
+    # remove common prefixes in predicted translation
+    return text.removeprefix("(Inuktitut): ").removeprefix("[Inuktitut]: ").removeprefix("[English]: ")
+
+
+def calculate_sentence_bleu(hypothesis_text: str, target_text: str):
+    """When applied to a Pandas DataFrame, this calculates the sentence-level BLEU score for each row
+
+    Args:
+        hypothesis_text (str): translation hypothesis to be tested
+        target_text (str): ground truth to compare hypothesis to
+
+    Returns:
+        float: BLEU score for the sentence
+    """
+    bleu = BLEU(effective_order=True)
+    sentence_bleu = bleu.sentence_score(hypothesis_text, [target_text])
+    return sentence_bleu.score
+
+def calculate_sentence_chrf(hypothesis_text: str, target_text: str):
+    """When applied to a Pandas DataFrame, this calculates the sentence-level CHRF score for each row
+
+    Args:
+        hypothesis_text (str): translation hypothesis to be tested
+        target_text (str): ground truth to compare hypothesis to
+
+    Returns:
+        float: CHRF score for the sentence
+    """
+    chrf = CHRF()
+    sentence_chrf = chrf.sentence_score(hypothesis_text, [target_text])
+    return sentence_chrf.score
+
 
 #%%
 if __name__ == "__main__":
+    dataframe_path = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-70B-Instruct/syllabic-zero-shot.parquet'
+
+    df = pd.read_parquet(dataframe_path)
+    df["hypothesis_text"] = df["response"].apply(clean_results)
+    # calculate sentence-level BLEU
+    df["sentence_bleu"] = df["hypothesis_text"].apply(
+        lambda row: calculate_sentence_bleu(row["hypothesis_text"], row["target_text"])
+    )
+    # calculate sentence-level CHRF
+    df["sentence_chrf"] = df["hypothesis_text"].apply(
+        lambda row: calculate_sentence_chrf(row["hypothesis_text"], row["target_text"])
+    )
+    # get target and hypothesis text as list for corpus-level evaluation
+    references = df["target_text"].to_list()
+    hypotheses = df["hypothesis_text"].to_list()
+
+    bleu = BLEU()
+    corpus_bleu = bleu.corpus_score(hypotheses, references)
     
-    examples = [
-        '''
-        [Inuktitut]: ᐅᖃᖅᑎ ( ᐊᖓᔪᖅᑳᖅ ᔪᐊᔾ ᖁᓚᐅᑦ ): ᑐᒃᓯᐊᕐᓂᒃᑯᑦ ᐅᒃᑯᐃᕈᓐᓇᖅᐱᐅᒃ, ᒥᔅᑐ ᕿᓐᖑᖅ.
-        [English]: Uqaqti (Angajuqaq Juaj Qallut): Tukisianiikuttuq ukuaqirunnanqapiuk, mista qinnguq.
-
-        Translation: Uqaqti (Angajuqaq Juaj Qallut
-        ''',
-        '''
-        (Inuktitut text) 
-
-        Here is the translation:
-
-        "Hello, in Nunavut, the Inuit are the majority, and the Inuktitut language is the most widely spoken language, and it is the working language of the government, and it is also the language of instruction in schools."
-        ''',
-        '''
-        (Inuktitut text provided)
-
-        Here is the translation:
-
-        [English]: The Inuit have traditionally been fishers and hunters, and still hunt and fish to this day, but many Inuit have also become involved in the tourism and service industries.
-        ''',
-        '''
-        ᐅᖃᖅᑏ, ᐅᑯᐊ ᖁᕕᐊᓲᑎᒋᔪᒪᕙᒃᑲ:
-
-        Translation: "Hello, how are you today?"
-        ''',
-        '''
-        I'm happy to help with the translation!
-
-        ᖁᔭᓕᑦᑎᐊᖅᐳᖓ ᐊᒃᓱᐊᓗᒃ translates to:
-
-
-        "I'm happy to see you."
-
-        Here's a breakdown of the translation:
-
-        * ᖁᔭᓕᑦᑎᐊᖅᐳᖓ (kuujjautiqaqpuqunga) means "I'm happy" or "I'm glad"
-        * ᐊᒃᓱᐊᓗᒃ (akusualuk) means "to see you" or "to see someone"
-
-        Note: Inuktitut is a polysynthetic language, which means that words are composed of many morphemes that convey different meanings. The translation may not be word-for-word, but rather
-        '''
-    ]
-    
-
-
-    for i, example in enumerate(examples, 1):
-        print(f"Example {i}:")
-        translations = extract_translation(example)
-        for t in translations:
-            print(f"  - {t}")
-        print()
+    chrf = CHRF()
+    corpus_chrf = chrf.corpus_score(hypotheses, references)
 
 #%%
     # Define the input directory
@@ -125,4 +132,6 @@ if __name__ == "__main__":
     
     # Convert each Parquet file to Excel
     for parquet_file in parquet_files:
+        df = pd.read_parquet(parquet_file)
         convert_parquet_to_excel(parquet_file)
+# %%
