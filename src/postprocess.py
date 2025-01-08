@@ -101,27 +101,34 @@ def calculate_sentence_chrf(hypothesis_text: str, target_text: str):
 
 #%%
 if __name__ == "__main__":
-    dataframe_path = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-70B-Instruct/syllabic-zero-shot.parquet'
+    dataframe_path = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-8B-Instruct/syllabic-zero-shot.parquet'
 
     df = pd.read_parquet(dataframe_path)
     df["hypothesis_text"] = df["response"].apply(clean_results)
+
     # calculate sentence-level BLEU
-    df["sentence_bleu"] = df["hypothesis_text"].apply(
-        lambda row: calculate_sentence_bleu(row["hypothesis_text"], row["target_text"])
-    )
+    df["sentence_bleu"] = df.apply(lambda x: calculate_sentence_bleu(x["hypothesis_text"], x["target_text"]), axis=1)
     # calculate sentence-level CHRF
-    df["sentence_chrf"] = df["hypothesis_text"].apply(
-        lambda row: calculate_sentence_chrf(row["hypothesis_text"], row["target_text"])
-    )
+    df["sentence_chrf"] = df.apply(lambda x: calculate_sentence_chrf(x["hypothesis_text"], x["target_text"]), axis=1)
+
     # get target and hypothesis text as list for corpus-level evaluation
     references = df["target_text"].to_list()
     hypotheses = df["hypothesis_text"].to_list()
 
     bleu = BLEU()
     corpus_bleu = bleu.corpus_score(hypotheses, references)
-    
+
     chrf = CHRF()
     corpus_chrf = chrf.corpus_score(hypotheses, references)
+
+    output_file = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-8B-Instruct/syllabic-eval.txt'
+    with open(output_file, "w") as f:
+        f.write(f"BLEU Score: {corpus_bleu}\n")
+        f.write(f"BLEU Signature: {bleu.get_signature()}\n")
+        f.write(f"CHRF2 Score: {corpus_chrf}\n")
+        f.write(f"CHRF2 Signature: {chrf.get_signature()}")
+    df.to_parquet(dataframe_path)
+
 
 #%%
     # Define the input directory
