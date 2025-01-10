@@ -101,6 +101,7 @@ def calculate_sentence_chrf(hypothesis_text: str, target_text: str):
 
 #%%
 if __name__ == "__main__":
+    
     dataframe_path = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-8B-Instruct/syllabic-zero-shot.parquet'
 
     df = pd.read_parquet(dataframe_path)
