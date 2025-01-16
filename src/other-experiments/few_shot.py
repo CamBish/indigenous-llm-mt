@@ -150,38 +150,33 @@ if __name__ == '__main__':
     inuktitut_gold_standard_df = pd.read_parquet(SERIALIZED_GOLD_STANDARD_PATH)
     print("Loaded data")
 
+    # llama-3.1-8b-instruct: 5
     print("Generating Translation Results")
     start_time = time.perf_counter()
-    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df['source_text'].apply(few_shot_machine_translation, args=(inuktitut_gold_standard_df,5))
+    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df['source_text'].apply(few_shot_machine_translation, args=(inuktitut_gold_standard_df,1))
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
     print("Total time elapsed:", elapsed_time)
     average_time = elapsed_time / len(inuktitut_syllabic_df.index)
     print("Average processing time:", average_time)
-    
-    romanized_pattern = r"Romanization: (.+)\n"
-    translated_pattern = r"Translation: (.+)(\n|$)"
-    
-    inuktitut_syllabic_df["romanized_text"] = inuktitut_syllabic_df["response"].str.extract(romanized_pattern)
-    inuktitut_syllabic_df["translated_text"] = inuktitut_syllabic_df["response"].str.extract(translated_pattern)
-    
-    inuktitut_syllabic_df["romanized_truth"] = inuktitut_romanized_df["source_text"]
-    
+
     out_dir = os.path.join(
         project_dir,
         "src",
         "results",
-        MODEL
+        MODEL,
+        "few-shot-results"
     )
-    
+
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     
     out_path = os.path.join(
         out_dir,
-        "syllabic-few-shot.parquet"
+        "1-few-shot.parquet"
     )
-    
+
     inuktitut_syllabic_df.to_parquet(out_path)
+    print('saved results to disk')
 # %%
