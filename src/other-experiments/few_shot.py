@@ -64,10 +64,12 @@ SERIALIZED_GOLD_STANDARD_PATH = os.path.join(
 # Load environment variables from .env file
 SOURCE_LANGUAGE = os.environ.get("SOURCE_LANGUAGE", "Inuktitut (Syllabic)")
 TARGET_LANGUAGE = os.environ.get("TARGET_LANGUAGE", "English")
+N_SHOTS = 1
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
 print("Working with:", MODEL)
 print(f"Translating from {SOURCE_LANGUAGE} to {TARGET_LANGUAGE}")
+print(f'{N_SHOTS}-shot experiment')
 
 def few_shot_machine_translation(
     source_text:str,
@@ -146,14 +148,14 @@ if __name__ == '__main__':
     client = OpenAI()
 
     inuktitut_syllabic_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_SYLLABIC_PATH)
-    inuktitut_romanized_df = pd.read_parquet(TEST_DEDUP_INUKTITUT_ROMAN_PATH)
     inuktitut_gold_standard_df = pd.read_parquet(SERIALIZED_GOLD_STANDARD_PATH)
     print("Loaded data")
 
-    # llama-3.1-8b-instruct: 5
+
+    # llama-3.1-8b-instruct: ,5,20
     print("Generating Translation Results")
     start_time = time.perf_counter()
-    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df['source_text'].apply(few_shot_machine_translation, args=(inuktitut_gold_standard_df,1))
+    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df['source_text'].apply(few_shot_machine_translation, args=(inuktitut_gold_standard_df,N_SHOTS))
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
@@ -174,7 +176,7 @@ if __name__ == '__main__':
     
     out_path = os.path.join(
         out_dir,
-        "1-few-shot.parquet"
+        f"{N_SHOTS}-few-shot.parquet"
     )
 
     inuktitut_syllabic_df.to_parquet(out_path)
