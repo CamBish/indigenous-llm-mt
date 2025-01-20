@@ -64,7 +64,7 @@ SERIALIZED_GOLD_STANDARD_PATH = os.path.join(
 # Load environment variables from .env file
 SOURCE_LANGUAGE = os.environ.get("SOURCE_LANGUAGE", "Inuktitut (Syllabic)")
 TARGET_LANGUAGE = os.environ.get("TARGET_LANGUAGE", "English")
-N_SHOTS = 1
+N_SHOTS = 10
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
 print("Working with:", MODEL)
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     print("Loaded data")
 
 
-    # llama-3.1-8b-instruct: ,5,20
+    # llama-3.1-8b-instruct: 1,5,10,20
     print("Generating Translation Results")
     start_time = time.perf_counter()
     inuktitut_syllabic_df["response"] = inuktitut_syllabic_df['source_text'].apply(few_shot_machine_translation, args=(inuktitut_gold_standard_df,N_SHOTS))
