@@ -1,6 +1,7 @@
 #%%
 import os
 import time
+import sys
 
 import openai
 from openai import OpenAI
@@ -10,9 +11,18 @@ from dotenv import load_dotenv
 
 from utils import get_project_root
 
+module_path = "/Users/cambish/code-base/indigenous-llm-mt/src"
+
+if module_path not in sys.path:
+    print("test")
+    sys.path.append(module_path)
+
+from utils import get_project_root
+
 project_dir = get_project_root(os.path.abspath(os.path.dirname(__file__)))
 dotenv_path = os.path.join(project_dir, ".env")
 load_dotenv(dotenv_path)
+
 
 #--------------------------------------------------
 TEST_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
@@ -66,7 +76,7 @@ SOURCE_LANGUAGE = os.environ.get("SOURCE_LANGUAGE", "Inuktitut (Syllabic)")
 TARGET_LANGUAGE = os.environ.get("TARGET_LANGUAGE", "English")
 N_SHOTS = 10
 
-MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
+MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-70B-Instruct")
 print("Working with:", MODEL)
 print(f"Translating from {SOURCE_LANGUAGE} to {TARGET_LANGUAGE}")
 print(f'{N_SHOTS}-shot experiment')
@@ -153,6 +163,7 @@ if __name__ == '__main__':
 
 
     # llama-3.1-8b-instruct: 1,5,10,20
+    # llama-3.1-70b-instruct: 1,5,
     print("Generating Translation Results")
     start_time = time.perf_counter()
     inuktitut_syllabic_df["response"] = inuktitut_syllabic_df['source_text'].apply(few_shot_machine_translation, args=(inuktitut_gold_standard_df,N_SHOTS))
