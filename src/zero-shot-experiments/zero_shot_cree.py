@@ -7,7 +7,6 @@ from openai import OpenAI
 import pandas as pd
 
 from dotenv import load_dotenv
-from IPython.display import display
 
 from utils import get_project_root
 
@@ -110,7 +109,7 @@ if __name__ == '__main__':
     
     out_path = os.path.join(
         out_dir,
-        "plains-cree-zero-shot.parquet"
+        "cree-zero-shot.parquet"
     )
     
     plains_cree_df.to_parquet(out_path)
