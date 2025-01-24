@@ -2,7 +2,6 @@
 import os
 import time
 
-
 import openai
 from openai import OpenAI
 import pandas as pd

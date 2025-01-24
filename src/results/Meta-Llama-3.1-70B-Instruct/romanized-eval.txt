@@ -1,4 +1,4 @@
-BLEU Score: BLEU = 0.20 10.5/0.1/0.1/0.0 (BP = 1.000 ratio = 24.524 hyp_len = 515 ref_len = 21)
+BLEU Score: BLEU = 0.23 12.1/0.1/0.1/0.0 (BP = 1.000 ratio = 21.190 hyp_len = 445 ref_len = 21)
 BLEU Signature: nrefs:3329|case:mixed|eff:no|tok:13a|smooth:exp|version:2.5.1
-CHRF2 Score: chrF2 = 4.51
+CHRF2 Score: chrF2 = 5.28
 CHRF2 Signature: nrefs:3329|case:mixed|eff:yes|nc:6|nw:0|space:no|version:2.5.1
