@@ -101,7 +101,7 @@ def calculate_sentence_chrf(hypothesis_text: str, target_text: str):
 
 #%%
 if __name__ == "__main__":
-    convert_parquet_to_excel('/Users/cambish/code-base/indigenous-llm-mt/data/serialized/gold_standard.parquet')2
+    convert_parquet_to_excel('/Users/cambish/code-base/indigenous-llm-mt/data/serialized/gold_standard.parquet')
     #%%
     dataframe_path = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-70B-Instruct/romanized-zero-shot.parquet'
 
