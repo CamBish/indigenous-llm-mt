@@ -101,9 +101,7 @@ def calculate_sentence_chrf(hypothesis_text: str, target_text: str):
 
 #%%
 if __name__ == "__main__":
-    convert_parquet_to_excel('/Users/cambish/code-base/indigenous-llm-mt/data/serialized/gold_standard.parquet')
-    #%%
-    dataframe_path = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-70B-Instruct/romanized-zero-shot.parquet'
+    dataframe_path = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-70B-Instruct/few-shot-results/20-few-shot.parquet'
 
     df = pd.read_parquet(dataframe_path)
     df["hypothesis_text"] = df["response"].apply(clean_results)
@@ -123,7 +121,7 @@ if __name__ == "__main__":
     chrf = CHRF()
     corpus_chrf = chrf.corpus_score(hypotheses, references)
 
-    output_file = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-70B-Instruct/romanized-eval.txt'
+    output_file = '/Users/cambish/code-base/indigenous-llm-mt/src/results/Meta-Llama-3.1-70B-Instruct/few-shot-results/20-shot-eval.txt'
     with open(output_file, "w") as f:
         f.write(f"BLEU Score: {corpus_bleu}\n")
         f.write(f"BLEU Signature: {bleu.get_signature()}\n")
