@@ -6,18 +6,8 @@ from matplotlib.ticker import MultipleLocator,FormatStrFormatter,MaxNLocator
 
 mpl.rcParams['pdf.fonttype'] = 42
 mpl.rcParams['ps.fonttype'] = 42
-mpl.rcParams['font.family'] = 'Arial'
+mpl.rcParams['text.usetex'] = True
 
-fig = plt.figure(figsize=(10,6))
-ax = plt.axes((0.1,0.1,0.5,0.8))
-
-ax.set_xticks([0.2,1])
-ax.set_xticklabels(['1','5'])
-
-a=ax.yaxis.get_major_locator()
-b=ax.yaxis.get_major_formatter()
-
-ax.grid(True,which='major',axis='both',alpha=0.3)
 
 # %%
 num_examples = [1,5,10,20]
@@ -40,17 +30,29 @@ for ax in axes.flat:
     ax.set_xticks([1, 5, 10, 20])
     ax.grid(True,which='major',axis='both',alpha=0.3)
 
+axes[0,0].set_title(r"Llama-3.1-8B-Instruct Iu $\rightarrow$ En")
+axes[0,1].set_title(r'Llama-3.1-70B-Instruct Iu $\rightarrow$ En')
+
 axes[0,0].set_ylabel('BLEU')
 axes[1,0].set_ylabel('chrF++')
 
-axes[1,0].set_xlabel('# examples')
-axes[1,1].set_xlabel('# examples')
+axes[1,0].set_xlabel(r'\# examples')
+axes[1,1].set_xlabel(r'\# examples')
 
 axes[0,0].plot(num_examples, bleu_8b_results)
+axes[0,0].axhline(y=bleu_8b_baseline, color='red', linestyle='dashed')
+
 axes[0,1].plot(num_examples, bleu_70b_results)
+axes[0,1].axhline(y=bleu_70b_baseline, color='red', linestyle='dashed')
 
 axes[1,0].plot(num_examples, chrf_8b_results)
-axes[1,1].plot(num_examples, chrf_70b_results)
+axes[1,0].axhline(y=chrf_8b_baseline, color='red', linestyle='dashed')
 
+axes[1,1].plot(num_examples, chrf_70b_results)
+axes[1,1].axhline(y=chrf_70b_baseline, color='red', linestyle='dashed', label='Zero-shot baseline')
+
+axes[1,1].legend(loc='lower right')
+
+fig.tight_layout()
 
 # %%
