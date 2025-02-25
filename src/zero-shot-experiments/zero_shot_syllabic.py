@@ -41,8 +41,8 @@ DEVTEST_DEDUP_INUKTITUT_SYLLABIC_PATH = os.path.join(
     "devtest-dedup_syllabic_parallel_corpus.parquet"
 )
 #--------------------------------------------------
-TARGET_LANGUAGE = "Inuktitut (Syllabic)"
-SOURCE_LANGUAGE = "English"
+SOURCE_LANGUAGE = "Inuktitut (Syllabic)"
+TARGET_LANGUAGE = "English"
 
 MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
 print("Working with:", MODEL)
@@ -56,15 +56,21 @@ def zero_shot_machine_translation(
     model=None,
 ):
     messages = [
-        {
-            "role": "system",
-            "content": "You are a machine translation system.",
-        },
-        {
-            "role": "user",
-            "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
-        },
-    ]
+    {
+        "role": "user",
+        "content": f"You are a machine translation system. \n[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+    },
+    ] # prompt template for mistral
+    # messages = [
+    #     {
+    #         "role": "system",
+    #         "content": "You are a machine translation system.",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+    #     },
+    # ]
 
     json_data = {"model": MODEL,  "messages": messages}
 
@@ -110,7 +116,7 @@ if __name__ == '__main__':
 
     print("Generating Translation Results")
     start_time = time.perf_counter()
-    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df["target_text"].apply(zero_shot_machine_translation)
+    inuktitut_syllabic_df["response"] = inuktitut_syllabic_df["source_text"].apply(zero_shot_machine_translation)
     end_time = time.perf_counter()
 
     elapsed_time = end_time - start_time
@@ -130,7 +136,7 @@ if __name__ == '__main__':
     
     out_path = os.path.join(
         out_dir,
-        "reverse-syllabic-zero-shot.parquet"
+        "syllabic-zero-shot.parquet"
     )
     
     inuktitut_syllabic_df.to_parquet(out_path)

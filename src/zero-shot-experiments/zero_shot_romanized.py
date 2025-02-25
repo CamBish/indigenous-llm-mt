@@ -42,7 +42,7 @@ SERIALIZED_CREE_PATH = os.path.join(
 SOURCE_LANGUAGE = "Inuktitut (Romanized)"
 TARGET_LANGUAGE = "English"
 
-MODEL = os.environ.get("MODEL", "Meta-Llama-3.1-8B-Instruct")
+MODEL = os.environ.get("MODEL", "Mistral-7B-Instruct-v0.3")
 print("Working with:", MODEL)
 
 def zero_shot_machine_translation(
@@ -55,14 +55,20 @@ def zero_shot_machine_translation(
 ):
     messages = [
         {
-            "role": "system",
-            "content": "You are a machine translation system.",
-        },
-        {
             "role": "user",
-            "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+            "content": f"You are a machine translation system. \n[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
         },
-    ]
+    ] # prompt template for mistral
+    # messages = [
+    #     {
+    #         "role": "system",
+    #         "content": "You are a machine translation system.",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+    #     },
+    # ] # prompt template for Llama-3.1
 
     json_data = {"model": MODEL,  "messages": messages}
 
