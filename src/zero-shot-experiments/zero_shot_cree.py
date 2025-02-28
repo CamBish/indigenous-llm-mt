@@ -34,15 +34,21 @@ def zero_shot_machine_translation(
     model=None,
 ):
     messages = [
-        {
-            "role": "system",
-            "content": "You are a machine translation system.",
-        },
-        {
-            "role": "user",
-            "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
-        },
-    ]
+    {
+        "role": "user",
+        "content": f"You are a machine translation system. \n[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+    },
+    ] # prompt template for mistral
+    # messages = [
+    #     {
+    #         "role": "system",
+    #         "content": "You are a machine translation system.",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+    #     },
+    # ]
 
     json_data = {"model": MODEL,  "messages": messages}
 

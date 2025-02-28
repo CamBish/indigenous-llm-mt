@@ -70,7 +70,7 @@ def zero_shot_machine_translation(
     #         "role": "user",
     #         "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
     #     },
-    # ]
+    # ] # prompt template for llama-3.1
 
     json_data = {"model": MODEL,  "messages": messages}
 
