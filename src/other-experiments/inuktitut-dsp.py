@@ -56,16 +56,23 @@ def domain_specific_machine_translation(
     n=None,
     model=None,
 ):
+    # messages = [
+    #     {
+    #         "role": "system",
+    #         "content": f"You are a machine translation system that translates sentences in the {DOMAIN} domain.",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+    #     },
+    # ] #Llama 3 format
+
     messages = [
         {
-            "role": "system",
-            "content": f"You are a machine translation system that translates sentences in the {DOMAIN} domain.",
-        },
-        {
             "role": "user",
-            "content": f"[{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
-        },
-    ]
+            "content": f"You are a machine translation system that translates sentences in the {DOMAIN} domain. \n [{SOURCE_LANGUAGE}]: {source_text}\n[{TARGET_LANGUAGE}]:",
+        }
+    ] # Mistral/Gemma format
 
     json_data = {"model": MODEL,  "messages": messages}
 

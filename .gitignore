@@ -4,6 +4,8 @@ data/
 models/
 src/scripts/slurm_out/
 .env
+*.xlsx
+*.xlsm
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
